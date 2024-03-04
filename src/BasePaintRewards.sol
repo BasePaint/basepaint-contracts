@@ -13,7 +13,7 @@ interface IBasePaint is IERC1155 {
 
 contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BPR"), ERC1155Holder {
     IBasePaint public immutable basepaint;
-    mapping(address => uint256) public rewardRate; // bpis, 1 = 0.1%
+    mapping(address referrer => uint256 bips) public rewardRate; // bpis, 1 = 0.1%
     uint256 public defaultRewardRate = 10; // 1.0%
 
     event ToppedUp(uint256 amount);
@@ -22,10 +22,14 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         basepaint = _basepaint;
     }
 
-    function mint(address to, uint256 count, address sendRewardsTo) external payable {
+    function mintLatest(address to, uint256 count, address sendRewardsTo) public payable {
         uint256 day = basepaint.today() - 1;
-        basepaint.mint{value: msg.value}(day, count);
-        basepaint.safeTransferFrom(address(this), to, day, count, "");
+        mint(day, to, count, sendRewardsTo);
+    }
+
+    function mint(uint256 tokenId, address to, uint256 count, address sendRewardsTo) public payable {
+        basepaint.mint{value: msg.value}(tokenId, count);
+        basepaint.safeTransferFrom(address(this), to, tokenId, count, "");
 
         if (sendRewardsTo == address(0)) {
             return;
@@ -60,12 +64,12 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         }
     }
 
-    function setRewardRate(address account, uint256 rate) public onlyOwner {
-        require(rate <= 1_000, "Invalid rate");
-        if (account != address(0)) {
-            rewardRate[account] = rate;
+    function setRewardRate(address referrer, uint256 bips) public onlyOwner {
+        require(bips <= 1_000, "Invalid rate");
+        if (referrer == address(0)) {
+            defaultRewardRate = bips;
         } else {
-            defaultRewardRate = rate;
+            rewardRate[referrer] = bips;
         }
     }
 
