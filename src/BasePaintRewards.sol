@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: MIT
+
+//    ___               ___       _      __    ___                         __  
+//   / _ )___ ____ ___ / _ \___ _(_)__  / /_  / _ \___ _    _____ ________/ /__
+//  / _  / _ `(_-</ -_) ___/ _ `/ / _ \/ __/ / , _/ -_) |/|/ / _ `/ __/ _  (_-<
+// /____/\_,_/___/\__/_/   \_,_/_/_//_/\__/ /_/|_|\__/|__,__/\_,_/_/  \_,_/___/
+
 pragma solidity ^0.8.13;
 
 import {IERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol";
@@ -16,20 +22,21 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
     mapping(address referrer => uint256 bips) public rewardRate; // bpis, 1 = 0.1%
     uint256 public defaultRewardRate = 10; // 1.0%
 
+    error NotEnoughContractFunds();
+    error NoRewards();
+    error TransferFailed();
+    error InvalidRate();
+
     event ToppedUp(uint256 amount);
 
     constructor(IBasePaint _basepaint) {
         basepaint = _basepaint;
     }
 
-    function mintLatest(address to, uint256 count, address sendRewardsTo) public payable {
-        uint256 day = basepaint.today() - 1;
-        mint(day, to, count, sendRewardsTo);
-    }
-
-    function mint(uint256 tokenId, address to, uint256 count, address sendRewardsTo) public payable {
+    function mint(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
+        uint256 tokenId = basepaint.today() - 1;
         basepaint.mint{value: msg.value}(tokenId, count);
-        basepaint.safeTransferFrom(address(this), to, tokenId, count, "");
+        basepaint.safeTransferFrom(address(this), sendMintsTo, tokenId, count, "");
 
         if (sendRewardsTo == address(0)) {
             return;
@@ -46,16 +53,23 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
 
     function cashOut(address account) public {
         uint256 available = address(this).balance;
-        require(available > 0, "No funds available in the contract, try later");
+        if(available == 0) {
+            revert NotEnoughContractFunds();
+        }
 
         uint256 balance = balanceOf(account);
-        require(balance > 0, "No rewards to cash out");
+        if(balance == 0) {
+            revert NoRewards();
+        }
 
         uint256 withdrawable = available < balance ? available : balance;
 
         _burn(account, withdrawable);
         (bool success,) = account.call{value: withdrawable}("");
-        require(success, "Transfer failed");
+
+        if(!success) {
+            revert TransferFailed();
+        }
     }
 
     function cashOutBatched(address[] calldata accounts) public {
@@ -65,7 +79,10 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
     }
 
     function setRewardRate(address referrer, uint256 bips) public onlyOwner {
-        require(bips <= 1_000, "Invalid rate");
+        if(bips > 1_000) {
+            revert InvalidRate();
+        }
+
         if (referrer == address(0)) {
             defaultRewardRate = bips;
         } else {
@@ -75,7 +92,9 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
 
     function withdraw(uint256 value) public onlyOwner {
         (bool success,) = msg.sender.call{value: value}("");
-        require(success, "Transfer failed");
+        if(!success) {
+            revert TransferFailed();
+        }
     }
 
     receive() external payable {
