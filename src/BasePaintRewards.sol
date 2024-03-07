@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-//    ___               ___       _      __    ___                         __  
+//    ___               ___       _      __    ___                         __
 //   / _ )___ ____ ___ / _ \___ _(_)__  / /_  / _ \___ _    _____ ________/ /__
 //  / _  / _ `(_-</ -_) ___/ _ `/ / _ \/ __/ / , _/ -_) |/|/ / _ `/ __/ _  (_-<
 // /____/\_,_/___/\__/_/   \_,_/_/_//_/\__/ /_/|_|\__/|__,__/\_,_/_/  \_,_/___/
@@ -33,8 +33,12 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         basepaint = _basepaint;
     }
 
-    function mintWithRewards(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
-        uint256 tokenId = basepaint.today() - 1;
+    function mintLatest(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
+        uint256 day = basepaint.today() - 1;
+        mint(day, sendMintsTo, count, sendRewardsTo);
+    }
+
+    function mint(uint256 tokenId, address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
         basepaint.mint{value: msg.value}(tokenId, count);
         basepaint.safeTransferFrom(address(this), sendMintsTo, tokenId, count, "");
 
@@ -53,12 +57,12 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
 
     function cashOut(address account) public {
         uint256 available = address(this).balance;
-        if(available == 0) {
+        if (available == 0) {
             revert NotEnoughContractFunds();
         }
 
         uint256 balance = balanceOf(account);
-        if(balance == 0) {
+        if (balance == 0) {
             revert NoRewards();
         }
 
@@ -67,7 +71,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         _burn(account, withdrawable);
         (bool success,) = account.call{value: withdrawable}("");
 
-        if(!success) {
+        if (!success) {
             revert TransferFailed();
         }
     }
@@ -79,7 +83,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
     }
 
     function setRewardRate(address referrer, uint256 bips) public onlyOwner {
-        if(bips > 1_000) {
+        if (bips > 1_000) {
             revert InvalidRate();
         }
 
@@ -92,7 +96,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
 
     function withdraw(uint256 value) public onlyOwner {
         (bool success,) = msg.sender.call{value: value}("");
-        if(!success) {
+        if (!success) {
             revert TransferFailed();
         }
     }

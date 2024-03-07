@@ -35,7 +35,7 @@ contract BasePaintRewardsTest is Test {
 
     function testMintWithRewards() public {
         uint256 price = paint.openEditionPrice();
-        rewards.mintWithRewards{value: price}({sendMintsTo: bob, count: 1, sendRewardsTo: safe});
+        rewards.mint{value: price}({tokenId: 1, sendMintsTo: bob, count: 1, sendRewardsTo: safe});
 
         assertEq(paint.balanceOf(bob, 1), 1);
         assertEq(rewards.balanceOf(safe), price * rewards.defaultRewardRate() / 1_000);
@@ -56,7 +56,7 @@ contract BasePaintRewardsTest is Test {
     function testMintWithCustomRewards() public {
         uint256 price = paint.openEditionPrice();
         rewards.setRewardRate(safe, 1_000); // 100%
-        rewards.mintWithRewards{value: price}({sendMintsTo: bob, count: 1, sendRewardsTo: safe});
+        rewards.mintLatest{value: price}({sendMintsTo: bob, count: 1, sendRewardsTo: safe});
 
         vm.deal(address(rewards), 1 ether);
         rewards.cashOut(safe);
