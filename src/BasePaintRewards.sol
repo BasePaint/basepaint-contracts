@@ -33,7 +33,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         basepaint = _basepaint;
     }
 
-    function mint(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
+    function mintWithRewards(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
         uint256 tokenId = basepaint.today() - 1;
         basepaint.mint{value: msg.value}(tokenId, count);
         basepaint.safeTransferFrom(address(this), sendMintsTo, tokenId, count, "");

@@ -35,17 +35,17 @@ contract BasePaintRewardsTest is Test {
 
     function testMintWithRewards() public {
         uint256 price = paint.openEditionPrice();
-        rewards.mint{value: price}({tokenId: 1, to: bob, count: 1, sendRewardsTo: safe});
+        rewards.mintWithRewards{value: price}({sendMintsTo: bob, count: 1, sendRewardsTo: safe});
 
         assertEq(paint.balanceOf(bob, 1), 1);
         assertEq(rewards.balanceOf(safe), price * rewards.defaultRewardRate() / 1_000);
 
-        vm.expectRevert("No funds available in the contract, try later");
+        vm.expectRevert(BasePaintRewards.NotEnoughContractFunds.selector);
         rewards.cashOut(safe);
 
         vm.deal(address(rewards), 1 ether);
 
-        vm.expectRevert("No rewards to cash out");
+        vm.expectRevert(BasePaintRewards.NoRewards.selector);
         rewards.cashOut(bob);
 
         rewards.cashOut(safe);
@@ -56,7 +56,7 @@ contract BasePaintRewardsTest is Test {
     function testMintWithCustomRewards() public {
         uint256 price = paint.openEditionPrice();
         rewards.setRewardRate(safe, 1_000); // 100%
-        rewards.mintLatest{value: price}({to: bob, count: 1, sendRewardsTo: safe});
+        rewards.mintWithRewards{value: price}({sendMintsTo: bob, count: 1, sendRewardsTo: safe});
 
         vm.deal(address(rewards), 1 ether);
         rewards.cashOut(safe);
