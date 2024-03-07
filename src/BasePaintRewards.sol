@@ -17,7 +17,7 @@ interface IBasePaint is IERC1155 {
     function mint(uint256 day, uint256 count) external payable;
 }
 
-contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BPR"), ERC1155Holder {
+contract BasePaintRewards is Ownable, ERC20("BasePaint Rewards", "BPR"), ERC1155Holder {
     IBasePaint public immutable basepaint;
     mapping(address referrer => uint256 bips) public rewardRate; // bips, 1 = 0.1%
     uint256 public defaultRewardRate = 10; // 1.0%
@@ -29,7 +29,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
 
     event ToppedUp(uint256 amount);
 
-    constructor(IBasePaint _basepaint) {
+    constructor(IBasePaint _basepaint, address _owner) Ownable(_owner) {
         basepaint = _basepaint;
     }
 

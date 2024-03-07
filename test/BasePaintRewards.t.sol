@@ -19,7 +19,7 @@ contract BasePaintRewardsTest is Test {
     function setUp() public {
         brush = new FakeBrush();
         paint = new BasePaint(brush, 1 days);
-        rewards = new BasePaintRewards(IBasePaint(address(paint)));
+        rewards = new BasePaintRewards(IBasePaint(address(paint)), address(this));
 
         vm.deal(bob, 100 ether);
 
