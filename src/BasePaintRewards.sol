@@ -19,7 +19,7 @@ interface IBasePaint is IERC1155 {
 
 contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BPR"), ERC1155Holder {
     IBasePaint public immutable basepaint;
-    mapping(address referrer => uint256 bips) public rewardRate; // bpis, 1 = 0.1%
+    mapping(address referrer => uint256 bips) public rewardRate; // bips, 1 = 0.1%
     uint256 public defaultRewardRate = 10; // 1.0%
 
     error NotEnoughContractFunds();
@@ -34,8 +34,8 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
     }
 
     function mintLatest(address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
-        uint256 day = basepaint.today() - 1;
-        mint(day, sendMintsTo, count, sendRewardsTo);
+        uint256 tokenIdOnSale = basepaint.today() - 1;
+        mint(tokenIdOnSale, sendMintsTo, count, sendRewardsTo);
     }
 
     function mint(uint256 tokenId, address sendMintsTo, uint256 count, address sendRewardsTo) public payable {
@@ -76,13 +76,13 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         }
     }
 
-    function cashOutBatched(address[] calldata accounts) public {
+    function cashOutBatched(address[] calldata accounts) external {
         for (uint256 i = 0; i < accounts.length; i++) {
             cashOut(accounts[i]);
         }
     }
 
-    function setRewardRate(address referrer, uint256 bips) public onlyOwner {
+    function setRewardRate(address referrer, uint256 bips) external onlyOwner {
         if (bips > 1_000) {
             revert InvalidRate();
         }
@@ -94,7 +94,7 @@ contract BasePaintRewards is Ownable(msg.sender), ERC20("BasePaint Rewards", "BP
         }
     }
 
-    function withdraw(uint256 value) public onlyOwner {
+    function withdraw(uint256 value) external onlyOwner {
         (bool success,) = msg.sender.call{value: value}("");
         if (!success) {
             revert TransferFailed();
