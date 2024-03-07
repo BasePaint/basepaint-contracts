@@ -63,6 +63,19 @@ contract BasePaintRewardsTest is Test {
         assertEq(rewards.balanceOf(safe), 0);
         assertEq(safe.balance, 0.0026 ether);
     }
+
+    function testMintMany() public {
+        uint256 price = paint.openEditionPrice();
+
+        for (uint256 i = 0; i < 10; i++) {
+            rewards.mint{value: price}({
+                tokenId: 1,
+                sendMintsTo: address(uint160(bob) + uint160(i)),
+                count: 1,
+                sendRewardsTo: safe
+            });
+        }
+    }
 }
 
 contract FakeBrush is ERC721, IBasePaintBrush {
