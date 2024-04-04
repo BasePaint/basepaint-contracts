@@ -5,7 +5,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 
 interface IBasePaintRewards {
-    function mintLatest(address sendMintsTo, uint256 count, address sendRewardsTo) public payable;
+    function mintLatest(address sendMintsTo, uint256 count, address sendRewardsTo) external payable;
 }
 
 interface IBasePaint{
@@ -20,13 +20,14 @@ contract BasePaintERC20Mint {
     ISwapRouter public immutable swapRouter;
     IBasePaintRewards public immutable basePaintRewards;
     IBasePaint public immutable basePaint;
+    IWETH public immutable weth;
 
     uint24 public constant poolFee = 3000;
 
      constructor(ISwapRouter _swapRouter, IBasePaintRewards _basePaintRewards, IBasePaint _basePaint, IWETH _weth) {
         swapRouter = _swapRouter;
         basePaintRewards = _basePaintRewards;
-        basePaint = _basePaintRewards;
+        basePaint = _basePaint;
         weth = _weth;
     }
 
@@ -34,7 +35,7 @@ contract BasePaintERC20Mint {
         address mintToken, 
         address sendMintsTo, 
         address sendRewardsTo, 
-        address mintTokenAmountIn,
+        uint256 mintTokenAmountIn,
         uint256 mintQuantity
     ) public {
         // Calc paint cost
@@ -57,7 +58,7 @@ contract BasePaintERC20Mint {
             sqrtPriceLimitX96: 0
         });
 
-        mintTokenSwapAmount = swapRouter.exactOutputSingle(params);
+        uint256 mintTokenSwapAmount = swapRouter.exactOutputSingle(params);
 
         // Transfer excess tokens
          if (mintTokenAmountIn > mintTokenSwapAmount) {
