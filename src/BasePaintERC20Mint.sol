@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.13;
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IBasePaintRewards {
     function mintLatest(address sendMintsTo, uint256 count, address sendRewardsTo) external payable;
-}
-
-interface IBasePaint{
-    function openEditionPrice() external view returns (uint256);
 }
 
 interface IWETH {
@@ -17,43 +15,38 @@ interface IWETH {
 }
 
 contract BasePaintERC20Mint {
-    ISwapRouter public immutable swapRouter;
-    IBasePaintRewards public immutable basePaintRewards;
-    IBasePaint public immutable basePaint;
-    IWETH public immutable weth;
+    IBasePaintRewards public basePaintRewards;
+    ISwapRouter public swapRouter;
+    IWETH public weth;
 
-    uint24 public constant poolFee = 3000;
+    uint24 public constant poolFee = 10000;
 
-     constructor(ISwapRouter _swapRouter, IBasePaintRewards _basePaintRewards, IBasePaint _basePaint, IWETH _weth) {
-        swapRouter = _swapRouter;
-        basePaintRewards = _basePaintRewards;
-        basePaint = _basePaint;
-        weth = _weth;
+    constructor(address _basePaintRewards, address _swapRouter, address _weth) {
+        basePaintRewards = IBasePaintRewards(_basePaintRewards);
+        swapRouter = ISwapRouter(_swapRouter);
+        weth = IWETH(_weth);
     }
 
     function mintWithERC20(
-        address mintToken, 
-        address sendMintsTo, 
-        address sendRewardsTo, 
+        address mintToken,
+        address sendMintsTo,
+        address sendRewardsTo,
         uint256 mintTokenAmountIn,
-        uint256 mintQuantity
+        uint256 mintQuantity,
+        uint256 totalETHCost
     ) public {
-        // Calc paint cost
-        uint256 ethCost = basePaint.openEditionPrice() * mintQuantity;
-
         // Transfer tokens in and approve router
         TransferHelper.safeTransferFrom(mintToken, msg.sender, address(this), mintTokenAmountIn);
         TransferHelper.safeApprove(mintToken, address(swapRouter), mintTokenAmountIn);
 
         // Swap settings
-        ISwapRouter.ExactOutputSingleParams memory params =
-        ISwapRouter.ExactOutputSingleParams({
+        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: mintToken,
             tokenOut: address(weth),
             fee: poolFee,
             recipient: address(this),
             deadline: block.timestamp,
-            amountOut: ethCost,
+            amountOut: totalETHCost,
             amountInMaximum: mintTokenAmountIn,
             sqrtPriceLimitX96: 0
         });
@@ -61,15 +54,16 @@ contract BasePaintERC20Mint {
         uint256 mintTokenSwapAmount = swapRouter.exactOutputSingle(params);
 
         // Transfer excess tokens
-         if (mintTokenAmountIn > mintTokenSwapAmount) {
+        if (mintTokenAmountIn > mintTokenSwapAmount) {
             TransferHelper.safeApprove(mintToken, address(swapRouter), 0);
             TransferHelper.safeTransfer(mintToken, msg.sender, mintTokenAmountIn - mintTokenSwapAmount);
         }
 
         // Unwrap ETH
-        weth.withdraw(ethCost); 
+        TransferHelper.safeApprove(address(weth), address(weth), mintTokenAmountIn);
+        weth.withdraw(totalETHCost);
 
         // Mint Paints
-        basePaintRewards.mintLatest(sendMintsTo, mintQuantity, sendRewardsTo);
+        basePaintRewards.mintLatest{value: totalETHCost}(sendMintsTo, mintQuantity, sendRewardsTo);
     }
 }
