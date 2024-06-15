@@ -1,17 +1,12 @@
-## Foundry
+## BasePaint Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+| Contract             | Deployment Address                           |
+| -------------------- | -------------------------------------------- |
+| BasePaint            | `0xBa5e05cb26b78eDa3A2f8e3b3814726305dcAc83` |
+| BasePaintBrush       | `0xD68fe5b53e7E1AbeB5A4d0A6660667791f39263a` |
+| BasePaintWIP         | `0xE6249eAfdC9C8a809fE28a5213120B1860f9a75f` |
+| BasePaintRewards     | `0xaff1A9E200000061fC3283455d8B0C7e3e728161` |
+| BasePaintBrushEvents | `0xb152f48F207d9D1C30Ff60d46E8cb8c1a5d00dEC` |
 
 ## Usage
 
@@ -48,7 +43,7 @@ $ anvil
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ ./script/deploy.sh script/<Contract>.s.sol
 ```
 
 ### Cast
