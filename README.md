@@ -7,6 +7,7 @@
 | BasePaintWIP         | `0xE6249eAfdC9C8a809fE28a5213120B1860f9a75f` |
 | BasePaintRewards     | `0xaff1A9E200000061fC3283455d8B0C7e3e728161` |
 | BasePaintBrushEvents | `0xb152f48F207d9D1C30Ff60d46E8cb8c1a5d00dEC` |
+| BasePaintAnimation   | `0xC59F475122e914aFCf31C0a9E0A2274666135e4E` |
 
 ## Usage
 
