@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract BasePaintMetadataRegistry is Ownable {
+    struct Metadata {
+        string name;
+        uint24[] palette;
+        uint256 size;
+        address proposer;
+    }
+
+    mapping(uint256 => Metadata) private registry;
+
+    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
+
+    constructor() Ownable(msg.sender) {}
+
+    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size) public onlyOwner {
+        registry[id] = Metadata(name, palette, size, msg.sender);
+        emit MetadataUpdated(id, name, palette, size, msg.sender);
+    }
+
+    function batchSetMetadata(
+        uint256[] memory ids,
+        string[] memory names,
+        uint24[][] memory palettes,
+        uint256[] memory sizes
+    ) public onlyOwner {
+        require(
+            ids.length == names.length && ids.length == palettes.length && ids.length == sizes.length,
+            "arrays must have the same length"
+        );
+
+        for (uint256 i = 0; i < ids.length; i++) {
+            registry[ids[i]] = Metadata(names[i], palettes[i], sizes[i], msg.sender);
+            emit MetadataUpdated(ids[i], names[i], palettes[i], sizes[i], msg.sender);
+        }
+    }
+
+    function getMetadata(uint256 id) public view returns (Metadata memory) {
+        return registry[id];
+    }
+
+    function getName(uint256 id) public view returns (string memory) {
+        return registry[id].name;
+    }
+
+    function getPalette(uint256 id) public view returns (uint24[] memory) {
+        return registry[id].palette;
+    }
+
+    function getCanvasSize(uint256 id) public view returns (uint256) {
+        return registry[id].size;
+    }
+
+    function getProposer(uint256 id) public view returns (address) {
+        return registry[id].proposer;
+    }
+}
