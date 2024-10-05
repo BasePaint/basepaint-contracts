@@ -27,16 +27,17 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         __UUPSUpgradeable_init();
     }
 
-    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size) public onlyOwner {
-        registry[id] = Metadata(name, palette, size, msg.sender);
-        emit MetadataUpdated(id, name, palette, size, msg.sender);
+    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size, address proposer) public onlyOwner {
+        registry[id] = Metadata(name, palette, size, proposer);
+        emit MetadataUpdated(id, name, palette, size, proposer);
     }
 
     function batchSetMetadata(
         uint256[] memory ids,
         string[] memory names,
         uint24[][] memory palettes,
-        uint256[] memory sizes
+        uint256[] memory sizes,
+        address[] memory proposers
     ) public onlyOwner {
         require(
             ids.length == names.length && ids.length == palettes.length && ids.length == sizes.length,
@@ -44,8 +45,8 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         );
 
         for (uint256 i = 0; i < ids.length; i++) {
-            registry[ids[i]] = Metadata(names[i], palettes[i], sizes[i], msg.sender);
-            emit MetadataUpdated(ids[i], names[i], palettes[i], sizes[i], msg.sender);
+            registry[ids[i]] = Metadata(names[i], palettes[i], sizes[i], proposers[i]);
+            emit MetadataUpdated(ids[i], names[i], palettes[i], sizes[i], proposers[i]);
         }
     }
 
