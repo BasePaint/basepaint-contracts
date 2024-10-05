@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract BasePaintMetadataRegistry is Ownable {
+contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     struct Metadata {
         string name;
         uint24[] palette;
@@ -12,10 +14,17 @@ contract BasePaintMetadataRegistry is Ownable {
     }
 
     mapping(uint256 => Metadata) private registry;
-
     event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
 
-    constructor() Ownable(msg.sender) {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) initializer public {
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
+    }
 
     function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size) public onlyOwner {
         registry[id] = Metadata(name, palette, size, msg.sender);
@@ -58,4 +67,10 @@ contract BasePaintMetadataRegistry is Ownable {
     function getProposer(uint256 id) public view returns (address) {
         return registry[id].proposer;
     }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyOwner
+        override
+    {}
 }

@@ -3,27 +3,44 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/BasePaintMetadataRegistry.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract MetadataRegistryTest is Test {
+contract BasePaintMetadataRegistryTest is Test {
+    BasePaintMetadataRegistry public implementation;
     BasePaintMetadataRegistry public registry;
     address public owner;
     address public user;
 
-    function setUp() public {
+    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
+
+     function setUp() public {
         owner = address(this);
         user = address(0x1);
-        registry = new BasePaintMetadataRegistry();
+
+        implementation = new BasePaintMetadataRegistry();
+
+        // Encode the initialize function call
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner);
+
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        registry = BasePaintMetadataRegistry(address(proxy));
+    }
+
+    function testInitialization() public {
+        assertEq(registry.owner(), owner);
     }
 
     function testSetMetadata() public {
         uint256 id = 1;
         string memory name = "Test Theme";
         uint24[] memory palette = new uint24[](3);
-        palette[0] = 0xFF0000; // Red
-        palette[1] = 0x00FF00; // Green
-        palette[2] = 0x0000FF; // Blue
+        palette[0] = 0xFF0000; 
+        palette[1] = 0x00FF00; 
+        palette[2] = 0x0000FF; 
         uint256 size = 100;
 
+        vm.expectEmit(true, false, false, true);
+        emit MetadataUpdated(id, name, palette, size, owner);
         registry.setMetadata(id, name, palette, size);
 
         BasePaintMetadataRegistry.Metadata memory data = registry.getMetadata(id);
@@ -84,7 +101,7 @@ contract MetadataRegistryTest is Test {
         registry.setMetadata(id, name, palette, size);
 
         assertEq(registry.getName(id), name);
-
+        
         uint24[] memory retrievedPalette = registry.getPalette(id);
         assertEq(retrievedPalette.length, palette.length);
         for (uint256 i = 0; i < palette.length; i++) {
@@ -97,13 +114,13 @@ contract MetadataRegistryTest is Test {
 
     function testOnlyOwnerCanSetMetadata() public {
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
         registry.setMetadata(1, "Test", new uint24[](0), 0);
     }
 
     function testOnlyOwnerCanBatchSetMetadata() public {
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
         registry.batchSetMetadata(new uint256[](1), new string[](1), new uint24[][](1), new uint256[](1));
     }
 
