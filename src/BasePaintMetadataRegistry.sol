@@ -27,7 +27,10 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         __UUPSUpgradeable_init();
     }
 
-    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size, address proposer) public onlyOwner {
+    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size, address proposer)
+        public
+        onlyOwner
+    {
         registry[id] = Metadata(name, palette, size, proposer);
         emit MetadataUpdated(id, name, palette, size, proposer);
     }

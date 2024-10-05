@@ -13,7 +13,7 @@ contract BasePaintMetadataRegistryTest is Test {
 
     event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
 
-     function setUp() public {
+    function setUp() public {
         owner = address(this);
         user = address(0x1);
 
@@ -34,14 +34,15 @@ contract BasePaintMetadataRegistryTest is Test {
         uint256 id = 1;
         string memory name = "Test Theme";
         uint24[] memory palette = new uint24[](3);
-        palette[0] = 0xFF0000; 
-        palette[1] = 0x00FF00; 
-        palette[2] = 0x0000FF; 
+        palette[0] = 0xFF0000;
+        palette[1] = 0x00FF00;
+        palette[2] = 0x0000FF;
         uint256 size = 100;
+        address proposer = address(0x2);
 
         vm.expectEmit(true, false, false, true);
-        emit MetadataUpdated(id, name, palette, size, owner);
-        registry.setMetadata(id, name, palette, size);
+        emit MetadataUpdated(id, name, palette, size, proposer);
+        registry.setMetadata(id, name, palette, size, proposer);
 
         BasePaintMetadataRegistry.Metadata memory data = registry.getMetadata(id);
         assertEq(data.name, name);
@@ -50,7 +51,7 @@ contract BasePaintMetadataRegistryTest is Test {
         assertEq(data.palette[1], 0x00FF00);
         assertEq(data.palette[2], 0x0000FF);
         assertEq(data.size, size);
-        assertEq(data.proposer, owner);
+        assertEq(data.proposer, proposer);
     }
 
     function testBatchSetMetadata() public {
@@ -75,7 +76,11 @@ contract BasePaintMetadataRegistryTest is Test {
         sizes[0] = 100;
         sizes[1] = 200;
 
-        registry.batchSetMetadata(ids, names, palettes, sizes);
+        address[] memory proposers = new address[](2);
+        proposers[0] = address(0x2);
+        proposers[1] = address(0x3);
+
+        registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
 
         for (uint256 i = 0; i < ids.length; i++) {
             BasePaintMetadataRegistry.Metadata memory data = registry.getMetadata(ids[i]);
@@ -85,7 +90,7 @@ contract BasePaintMetadataRegistryTest is Test {
                 assertEq(data.palette[j], palettes[i][j]);
             }
             assertEq(data.size, sizes[i]);
-            assertEq(data.proposer, owner);
+            assertEq(data.proposer, proposers[i]);
         }
     }
 
@@ -97,11 +102,12 @@ contract BasePaintMetadataRegistryTest is Test {
         palette[1] = 0x00FF00;
         palette[2] = 0x0000FF;
         uint256 size = 100;
+        address proposer = address(0x2);
 
-        registry.setMetadata(id, name, palette, size);
+        registry.setMetadata(id, name, palette, size, proposer);
 
         assertEq(registry.getName(id), name);
-        
+
         uint24[] memory retrievedPalette = registry.getPalette(id);
         assertEq(retrievedPalette.length, palette.length);
         for (uint256 i = 0; i < palette.length; i++) {
@@ -109,19 +115,21 @@ contract BasePaintMetadataRegistryTest is Test {
         }
 
         assertEq(registry.getCanvasSize(id), size);
-        assertEq(registry.getProposer(id), owner);
+        assertEq(registry.getProposer(id), proposer);
     }
 
     function testOnlyOwnerCanSetMetadata() public {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
-        registry.setMetadata(1, "Test", new uint24[](0), 0);
+        registry.setMetadata(1, "Test", new uint24[](0), 0, address(0));
     }
 
     function testOnlyOwnerCanBatchSetMetadata() public {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
-        registry.batchSetMetadata(new uint256[](1), new string[](1), new uint24[][](1), new uint256[](1));
+        registry.batchSetMetadata(
+            new uint256[](1), new string[](1), new uint24[][](1), new uint256[](1), new address[](1)
+        );
     }
 
     function testBatchSetMetadataWithMismatchedArrays() public {
@@ -129,8 +137,9 @@ contract BasePaintMetadataRegistryTest is Test {
         string[] memory names = new string[](1);
         uint24[][] memory palettes = new uint24[][](2);
         uint256[] memory sizes = new uint256[](2);
+        address[] memory proposers = new address[](2);
 
         vm.expectRevert("arrays must have the same length");
-        registry.batchSetMetadata(ids, names, palettes, sizes);
+        registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
     }
 }
