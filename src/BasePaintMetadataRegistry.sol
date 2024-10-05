@@ -14,6 +14,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
     }
 
     mapping(uint256 => Metadata) private registry;
+
     event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -21,7 +22,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         _disableInitializers();
     }
 
-    function initialize(address initialOwner) initializer public {
+    function initialize(address initialOwner) public initializer {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
     }
@@ -68,9 +69,5 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         return registry[id].proposer;
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        onlyOwner
-        override
-    {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
