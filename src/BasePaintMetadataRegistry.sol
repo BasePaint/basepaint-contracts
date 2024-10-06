@@ -9,7 +9,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
     struct Metadata {
         string name;
         uint24[] palette;
-        uint256 size;
+        uint96 size;
         address proposer;
     }
 
@@ -27,7 +27,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         __UUPSUpgradeable_init();
     }
 
-    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint256 size, address proposer)
+    function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint96 size, address proposer)
         public
         onlyOwner
     {
@@ -39,7 +39,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         uint256[] memory ids,
         string[] memory names,
         uint24[][] memory palettes,
-        uint256[] memory sizes,
+        uint96[] memory sizes,
         address[] memory proposers
     ) public onlyOwner {
         require(

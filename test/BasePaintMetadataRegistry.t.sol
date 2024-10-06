@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-import "../src/BasePaintMetadataRegistry.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Test} from "forge-std/Test.sol";
+import {BasePaintMetadataRegistry} from "../src/BasePaintMetadataRegistry.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract BasePaintMetadataRegistryTest is Test {
+    ERC1967Proxy proxy;
     BasePaintMetadataRegistry public implementation;
     BasePaintMetadataRegistry public registry;
     address public owner;
@@ -22,7 +25,7 @@ contract BasePaintMetadataRegistryTest is Test {
         // Encode the initialize function call
         bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner);
 
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        proxy = new ERC1967Proxy(address(implementation), data);
         registry = BasePaintMetadataRegistry(address(proxy));
     }
 
@@ -37,7 +40,7 @@ contract BasePaintMetadataRegistryTest is Test {
         palette[0] = 0xFF0000;
         palette[1] = 0x00FF00;
         palette[2] = 0x0000FF;
-        uint256 size = 100;
+        uint96 size = 100;
         address proposer = address(0x2);
 
         vm.expectEmit(true, false, false, true);
@@ -72,7 +75,7 @@ contract BasePaintMetadataRegistryTest is Test {
         palettes[1][1] = 0xFFFF00;
         palettes[1][2] = 0xFF00FF;
 
-        uint256[] memory sizes = new uint256[](2);
+        uint96[] memory sizes = new uint96[](2);
         sizes[0] = 100;
         sizes[1] = 200;
 
@@ -101,7 +104,7 @@ contract BasePaintMetadataRegistryTest is Test {
         palette[0] = 0xFF0000;
         palette[1] = 0x00FF00;
         palette[2] = 0x0000FF;
-        uint256 size = 100;
+        uint96 size = 100;
         address proposer = address(0x2);
 
         registry.setMetadata(id, name, palette, size, proposer);
@@ -128,7 +131,7 @@ contract BasePaintMetadataRegistryTest is Test {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
         registry.batchSetMetadata(
-            new uint256[](1), new string[](1), new uint24[][](1), new uint256[](1), new address[](1)
+            new uint256[](1), new string[](1), new uint24[][](1), new uint96[](1), new address[](1)
         );
     }
 
@@ -136,10 +139,41 @@ contract BasePaintMetadataRegistryTest is Test {
         uint256[] memory ids = new uint256[](2);
         string[] memory names = new string[](1);
         uint24[][] memory palettes = new uint24[][](2);
-        uint256[] memory sizes = new uint256[](2);
+        uint96[] memory sizes = new uint96[](2);
         address[] memory proposers = new address[](2);
 
         vm.expectRevert("arrays must have the same length");
         registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
+    }
+
+    function testUpgrade() public {
+        BasePaintMetadataRegistryV2 newImplementation = new BasePaintMetadataRegistryV2();
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistryV2.upgradeHasWorkedJustFine.selector);
+
+        registry.upgradeToAndCall(address(newImplementation), data);
+        assertEq(BasePaintMetadataRegistryV2(address(registry)).upgradeHasWorkedJustFine(), "upgradeHasWorkedJustFine");
+    }
+
+    function testUpgradeNotOwner() public {
+        BasePaintMetadataRegistryV2 newImplementation = new BasePaintMetadataRegistryV2();
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistryV2.upgradeHasWorkedJustFine.selector);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.upgradeToAndCall(address(newImplementation), data);
+    }
+
+    function testUpgradeWithBadCall() public {
+        BasePaintMetadataRegistryV2 newImplementation = new BasePaintMetadataRegistryV2();
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner);
+
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
+        registry.upgradeToAndCall(address(newImplementation), data);
+    }
+}
+
+contract BasePaintMetadataRegistryV2 is BasePaintMetadataRegistry {
+    function upgradeHasWorkedJustFine() public pure returns (string memory) {
+        return "upgradeHasWorkedJustFine";
     }
 }

@@ -9,7 +9,7 @@ contract DeployBasePaintMetadataRegistry is Script {
     function setUp() public {}
 
     function run() public {
-        address deployer = vm.envAddress("DEPLOYER_ADDRESS");
+        address deployer = vm.rememberKey(vm.envUint("DEPLOYER_KEY"));
 
         vm.startBroadcast();
 
