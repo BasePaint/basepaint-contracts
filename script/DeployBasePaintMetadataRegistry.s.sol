@@ -9,12 +9,13 @@ contract DeployBasePaintMetadataRegistry is Script {
     function setUp() public {}
 
     function run() public {
+        address owner = vm.envAddress("OWNER_ADDRESS");
         address deployer = vm.rememberKey(vm.envUint("DEPLOYER_KEY"));
 
         vm.startBroadcast();
 
         BasePaintMetadataRegistry implementation = new BasePaintMetadataRegistry();
-        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, deployer);
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner, deployer);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
 
         vm.stopBroadcast();

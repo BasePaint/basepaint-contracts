@@ -14,22 +14,36 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
     }
 
     mapping(uint256 => Metadata) private registry;
+    address public editor;
 
     event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint96 size, address proposer);
+    event EditorUpdated(address newEditor);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address initialOwner) public initializer {
+    function initialize(address initialOwner, address initialEditor) public initializer {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
+        editor = initialEditor;
+        emit EditorUpdated(initialEditor);
+    }
+
+    modifier onlyEditor() {
+        require(msg.sender == editor, "not the editor");
+        _;
+    }
+
+    function setEditor(address newEditor) public onlyOwner {
+        editor = newEditor;
+        emit EditorUpdated(newEditor);
     }
 
     function setMetadata(uint256 id, string memory name, uint24[] memory palette, uint96 size, address proposer)
         public
-        onlyOwner
+        onlyEditor
     {
         registry[id] = Metadata(name, palette, size, proposer);
         emit MetadataUpdated(id, name, palette, size, proposer);

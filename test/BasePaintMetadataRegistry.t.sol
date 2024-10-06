@@ -12,18 +12,20 @@ contract BasePaintMetadataRegistryTest is Test {
     BasePaintMetadataRegistry public implementation;
     BasePaintMetadataRegistry public registry;
     address public owner;
+    address public editor;
     address public user;
 
-    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
+    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint96 size, address proposer);
+    event EditorUpdated(address newEditor);
 
     function setUp() public {
         owner = address(this);
-        user = address(0x1);
+        editor = address(0x1);
+        user = address(0x2);
 
         implementation = new BasePaintMetadataRegistry();
 
-        // Encode the initialize function call
-        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner);
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner, editor);
 
         proxy = new ERC1967Proxy(address(implementation), data);
         registry = BasePaintMetadataRegistry(address(proxy));
@@ -31,6 +33,7 @@ contract BasePaintMetadataRegistryTest is Test {
 
     function testInitialization() public {
         assertEq(registry.owner(), owner);
+        assertEq(registry.editor(), editor);
     }
 
     function testSetMetadata() public {
@@ -41,8 +44,9 @@ contract BasePaintMetadataRegistryTest is Test {
         palette[1] = 0x00FF00;
         palette[2] = 0x0000FF;
         uint96 size = 100;
-        address proposer = address(0x2);
+        address proposer = address(0x3);
 
+        vm.prank(editor);
         vm.expectEmit(true, false, false, true);
         emit MetadataUpdated(id, name, palette, size, proposer);
         registry.setMetadata(id, name, palette, size, proposer);
@@ -80,9 +84,10 @@ contract BasePaintMetadataRegistryTest is Test {
         sizes[1] = 200;
 
         address[] memory proposers = new address[](2);
-        proposers[0] = address(0x2);
-        proposers[1] = address(0x3);
+        proposers[0] = address(0x3);
+        proposers[1] = address(0x4);
 
+        vm.prank(owner);
         registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
 
         for (uint256 i = 0; i < ids.length; i++) {
@@ -105,8 +110,9 @@ contract BasePaintMetadataRegistryTest is Test {
         palette[1] = 0x00FF00;
         palette[2] = 0x0000FF;
         uint96 size = 100;
-        address proposer = address(0x2);
+        address proposer = address(0x3);
 
+        vm.prank(editor);
         registry.setMetadata(id, name, palette, size, proposer);
 
         assertEq(registry.getName(id), name);
@@ -121,15 +127,25 @@ contract BasePaintMetadataRegistryTest is Test {
         assertEq(registry.getProposer(id), proposer);
     }
 
-    function testOnlyOwnerCanSetMetadata() public {
+    function testOnlyEditorCanSetMetadata() public {
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert("not the editor");
+        registry.setMetadata(1, "Test", new uint24[](0), 0, address(0));
+
+        vm.prank(owner);
+        vm.expectRevert("not the editor");
         registry.setMetadata(1, "Test", new uint24[](0), 0, address(0));
     }
 
     function testOnlyOwnerCanBatchSetMetadata() public {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.batchSetMetadata(
+            new uint256[](1), new string[](1), new uint24[][](1), new uint96[](1), new address[](1)
+        );
+
+        vm.prank(editor);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, editor));
         registry.batchSetMetadata(
             new uint256[](1), new string[](1), new uint24[][](1), new uint96[](1), new address[](1)
         );
@@ -142,14 +158,64 @@ contract BasePaintMetadataRegistryTest is Test {
         uint96[] memory sizes = new uint96[](2);
         address[] memory proposers = new address[](2);
 
+        vm.prank(owner);
         vm.expectRevert("arrays must have the same length");
         registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
+    }
+
+    function testSetEditor() public {
+        address newEditor = address(0x5);
+
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit EditorUpdated(newEditor);
+        registry.setEditor(newEditor);
+
+        assertEq(registry.editor(), newEditor);
+    }
+
+    function testOnlyOwnerCanSetEditor() public {
+        address newEditor = address(0x5);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.setEditor(newEditor);
+
+        vm.prank(editor);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, editor));
+        registry.setEditor(newEditor);
+
+        assertEq(registry.editor(), editor);
+    }
+
+    function testSetEditorPermissions() public {
+        address newEditor = address(0x5);
+
+        vm.prank(owner);
+        registry.setEditor(newEditor);
+
+        uint256 id = 1;
+        string memory name = "Test Theme";
+        uint24[] memory palette = new uint24[](3);
+        uint96 size = 100;
+        address proposer = address(0x3);
+
+        vm.prank(editor);
+        vm.expectRevert("not the editor");
+        registry.setMetadata(id, name, palette, size, proposer);
+
+        vm.prank(newEditor);
+        registry.setMetadata(id, name, palette, size, proposer);
+
+        BasePaintMetadataRegistry.Metadata memory data = registry.getMetadata(id);
+        assertEq(data.name, name);
     }
 
     function testUpgrade() public {
         BasePaintMetadataRegistryV2 newImplementation = new BasePaintMetadataRegistryV2();
         bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistryV2.upgradeHasWorkedJustFine.selector);
 
+        vm.prank(owner);
         registry.upgradeToAndCall(address(newImplementation), data);
         assertEq(BasePaintMetadataRegistryV2(address(registry)).upgradeHasWorkedJustFine(), "upgradeHasWorkedJustFine");
     }
@@ -161,12 +227,17 @@ contract BasePaintMetadataRegistryTest is Test {
         vm.prank(user);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
         registry.upgradeToAndCall(address(newImplementation), data);
+
+        vm.prank(editor);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, editor));
+        registry.upgradeToAndCall(address(newImplementation), data);
     }
 
     function testUpgradeWithBadCall() public {
         BasePaintMetadataRegistryV2 newImplementation = new BasePaintMetadataRegistryV2();
-        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner);
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner, editor);
 
+        vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
         registry.upgradeToAndCall(address(newImplementation), data);
     }
