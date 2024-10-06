@@ -15,7 +15,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
 
     mapping(uint256 => Metadata) private registry;
 
-    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint256 size, address proposer);
+    event MetadataUpdated(uint256 indexed id, string name, uint24[] palette, uint96 size, address proposer);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -65,7 +65,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         return registry[id].palette;
     }
 
-    function getCanvasSize(uint256 id) public view returns (uint256) {
+    function getCanvasSize(uint256 id) public view returns (uint96) {
         return registry[id].size;
     }
 
