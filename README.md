@@ -1,13 +1,14 @@
 ## BasePaint Contracts
 
-| Contract             | Deployment Address                           |
-| -------------------- | -------------------------------------------- |
-| BasePaint            | `0xBa5e05cb26b78eDa3A2f8e3b3814726305dcAc83` |
-| BasePaintBrush       | `0xD68fe5b53e7E1AbeB5A4d0A6660667791f39263a` |
-| BasePaintWIP         | `0xE6249eAfdC9C8a809fE28a5213120B1860f9a75f` |
-| BasePaintRewards     | `0xaff1A9E200000061fC3283455d8B0C7e3e728161` |
-| BasePaintBrushEvents | `0xb152f48F207d9D1C30Ff60d46E8cb8c1a5d00dEC` |
-| BasePaintAnimation   | `0xC59F475122e914aFCf31C0a9E0A2274666135e4E` |
+| Contract                  | Deployment Address                           |
+| ------------------------- | -------------------------------------------- |
+| BasePaint                 | `0xBa5e05cb26b78eDa3A2f8e3b3814726305dcAc83` |
+| BasePaintBrush            | `0xD68fe5b53e7E1AbeB5A4d0A6660667791f39263a` |
+| BasePaintWIP              | `0xE6249eAfdC9C8a809fE28a5213120B1860f9a75f` |
+| BasePaintRewards          | `0xaff1A9E200000061fC3283455d8B0C7e3e728161` |
+| BasePaintBrushEvents      | `0xb152f48F207d9D1C30Ff60d46E8cb8c1a5d00dEC` |
+| BasePaintAnimation        | `0xC59F475122e914aFCf31C0a9E0A2274666135e4E` |
+| BasePaintMetadataRegistry | `0xcfb86b6aC2cE09f9A01C39af9Dccf3ecba304F95` |
 
 ## Usage
 

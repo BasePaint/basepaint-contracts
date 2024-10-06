@@ -5,17 +5,18 @@ import "forge-std/Script.sol";
 import "../src/BasePaintMetadataRegistry.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract DeployBasePaintMetadataRegistry is Script {
+contract DeployMetadataRegistry is Script {
     function setUp() public {}
 
     function run() public {
-        address owner = vm.envAddress("OWNER_ADDRESS");
         address deployer = vm.rememberKey(vm.envUint("DEPLOYER_KEY"));
+        address owner = vm.envAddress("OWNER_ADDRESS");
+        address editor = vm.rememberKey(vm.envUint("ADMIN_KEY"));
 
-        vm.startBroadcast();
+        vm.startBroadcast(deployer);
 
         BasePaintMetadataRegistry implementation = new BasePaintMetadataRegistry();
-        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner, deployer);
+        bytes memory data = abi.encodeWithSelector(BasePaintMetadataRegistry.initialize.selector, owner, editor);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
 
         vm.stopBroadcast();
