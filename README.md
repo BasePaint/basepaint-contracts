@@ -8,7 +8,7 @@
 | BasePaintRewards          | `0xaff1A9E200000061fC3283455d8B0C7e3e728161` |
 | BasePaintBrushEvents      | `0xb152f48F207d9D1C30Ff60d46E8cb8c1a5d00dEC` |
 | BasePaintAnimation        | `0xC59F475122e914aFCf31C0a9E0A2274666135e4E` |
-| BasePaintMetadataRegistry | `0xcfb86b6aC2cE09f9A01C39af9Dccf3ecba304F95` |
+| BasePaintMetadataRegistry | `0x5104482a2Ef3a03b6270D3e931eac890b86FaD01` |
 
 ## Usage
 

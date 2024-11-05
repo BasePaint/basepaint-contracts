@@ -55,7 +55,7 @@ contract BasePaintMetadataRegistry is Initializable, UUPSUpgradeable, OwnableUpg
         uint24[][] memory palettes,
         uint96[] memory sizes,
         address[] memory proposers
-    ) public onlyOwner {
+    ) public onlyEditor {
         require(
             ids.length == names.length && ids.length == palettes.length && ids.length == sizes.length,
             "arrays must have the same length"
