@@ -28,11 +28,12 @@ contract BasePaintSubscription is Ownable, ERC1155 {
     IBasePaint immutable basepaint;
 
     error WrongEthAmount();
+    error InvalidSubscribedDay();
 
     struct Subscription {
-    uint256 day;
-    uint256 count;
-}
+        uint256 day;
+        uint256 count;
+    }
 
     constructor(address _basepaint, address _owner)
         Ownable(_owner)
@@ -41,31 +42,35 @@ contract BasePaintSubscription is Ownable, ERC1155 {
         basepaint = IBasePaint(_basepaint);
     }
 
-function subscribe(Subscription[] calldata _subscriptions, address _mintToAddress) payable external {
-    uint256 price = basepaint.openEditionPrice();
-    uint256 totalCount = 0;
-    
-    for (uint256 i = 0; i < _subscriptions.length; i++) {
-        totalCount += _subscriptions[i].count;
-    }
+    function subscribe(Subscription[] calldata _subscriptions, address _mintToAddress) external payable {
+        uint256 mintingToday = basepaint.today() - 1;
+        uint256 price = basepaint.openEditionPrice();
+        uint256 totalCount = 0;
 
-    if (msg.value != totalCount * price) revert WrongEthAmount();
+        for (uint256 i = 0; i < _subscriptions.length; i++) {
+            totalCount += _subscriptions[i].count;
+            if (_subscriptions[i].day <= mintingToday) {
+                revert InvalidSubscribedDay();
+            }
+        }
 
-    for (uint256 i = 0; i < _subscriptions.length; i++) {
-        _mint(_mintToAddress, _subscriptions[i].day, _subscriptions[i].count, "");
+        if (msg.value != totalCount * price) revert WrongEthAmount();
+
+        for (uint256 i = 0; i < _subscriptions.length; i++) {
+            _mint(_mintToAddress, _subscriptions[i].day, _subscriptions[i].count, "");
+        }
     }
-}
 
     function mintDaily(address[] calldata _addresses) external {
-        uint256 today = basepaint.today() - 1;
+        uint256 mintingToday = basepaint.today() - 1;
         uint256 mintCost = basepaint.openEditionPrice();
 
         for (uint256 i; i < _addresses.length;) {
-            uint256 tokenBalance = balanceOf(_addresses[i], today);
+            uint256 tokenBalance = balanceOf(_addresses[i], mintingToday);
             if (tokenBalance > 0) {
-                basepaint.mint{value: mintCost * tokenBalance}(today, tokenBalance);
-                _burn(_addresses[i], today, tokenBalance);
-                basepaint.safeTransferFrom(address(this), _addresses[i], today, tokenBalance, "");
+                basepaint.mint{value: mintCost * tokenBalance}(mintingToday, tokenBalance);
+                _burn(_addresses[i], mintingToday, tokenBalance);
+                basepaint.safeTransferFrom(address(this), _addresses[i], mintingToday, tokenBalance, "");
             }
             unchecked {
                 ++i;
