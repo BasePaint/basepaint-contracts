@@ -25,13 +25,14 @@ interface IBasePaint is IERC1155 {
 }
 
 contract BasePaintSubscription is Ownable, ERC1155 {
-    IBasePaint public basepaint;
+    IBasePaint immutable basepaint;
 
-    event Subscribed(address indexed subscriber, address indexed mintTo, uint256 length);
-
-    error NotEnoughMinted();
     error WrongEthAmount();
-    error InsufficientBalance();
+
+    struct Subscription {
+    uint256 day;
+    uint256 count;
+}
 
     constructor(address _basepaint, address _owner)
         Ownable(_owner)
@@ -40,70 +41,36 @@ contract BasePaintSubscription is Ownable, ERC1155 {
         basepaint = IBasePaint(_basepaint);
     }
 
-    function subscribe(uint8 _mintPerDay, address _mintToAddress, uint256 _length) external payable {
-        uint256 price = basepaint.openEditionPrice();
-        uint256 total = price * _mintPerDay * _length;
-
-        if (msg.value != total) revert WrongEthAmount();
-
-        emit Subscribed(msg.sender, _mintToAddress, _length);
-
-        uint256 todayId = basepaint.today();
-        for (uint256 i = 0; i < _length; i++) {
-            _mint(msg.sender, todayId + i, _mintPerDay, "");
-        }
+function subscribe(Subscription[] calldata _subscriptions, address _mintToAddress) payable external {
+    uint256 price = basepaint.openEditionPrice();
+    uint256 totalCount = 0;
+    
+    for (uint256 i = 0; i < _subscriptions.length; i++) {
+        totalCount += _subscriptions[i].count;
     }
 
-    function mintDaily(address[] calldata _addresses, uint256 _toMint) external {
+    if (msg.value != totalCount * price) revert WrongEthAmount();
+
+    for (uint256 i = 0; i < _subscriptions.length; i++) {
+        _mint(_mintToAddress, _subscriptions[i].day, _subscriptions[i].count, "");
+    }
+}
+
+    function mintDaily(address[] calldata _addresses) external {
         uint256 today = basepaint.today() - 1;
         uint256 mintCost = basepaint.openEditionPrice();
 
-        uint256 totalMintCost = 0;
-        uint256 minted = 0;
-
         for (uint256 i; i < _addresses.length;) {
             uint256 tokenBalance = balanceOf(_addresses[i], today);
-            if (tokenBalance == 0) {
-                unchecked {
-                    ++i;
-                }
-                continue;
+            if (tokenBalance > 0) {
+                basepaint.mint{value: mintCost * tokenBalance}(today, tokenBalance);
+                _burn(_addresses[i], today, tokenBalance);
+                basepaint.safeTransferFrom(address(this), _addresses[i], today, tokenBalance, "");
             }
-
-            totalMintCost += mintCost * tokenBalance;
-            minted += tokenBalance;
             unchecked {
                 ++i;
             }
         }
-
-        if (address(this).balance < totalMintCost) revert InsufficientBalance();
-
-        if (minted > 0) {
-            basepaint.mint{value: totalMintCost}(today, minted);
-
-            for (uint256 i; i < _addresses.length;) {
-                address mintToAddress = _addresses[i];
-
-                uint256 tokenBalance = balanceOf(_addresses[i], today);
-                if (tokenBalance > 0) {
-                    adminTransferAndBurn(_addresses[i], today, tokenBalance);
-
-                    basepaint.safeTransferFrom(address(this), mintToAddress, today, tokenBalance, "");
-                }
-
-                unchecked {
-                    ++i;
-                }
-            }
-        }
-
-        if (minted != _toMint) revert NotEnoughMinted();
-    }
-
-    function adminTransferAndBurn(address _from, uint256 _id, uint256 _amount) internal {
-        _safeTransferFrom(_from, address(this), _id, _amount, "");
-        _burn(address(this), _id, _amount);
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes memory) public pure returns (bytes4) {
@@ -117,4 +84,6 @@ contract BasePaintSubscription is Ownable, ERC1155 {
     {
         return this.onERC1155BatchReceived.selector;
     }
+
+    receive() external payable {}
 }
