@@ -14,9 +14,11 @@
 
 pragma solidity ^0.8.17;
 
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import {IERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol";
-import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
+import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 interface IBasePaint is IERC1155 {
     function openEditionPrice() external view returns (uint256);
@@ -24,8 +26,8 @@ interface IBasePaint is IERC1155 {
     function today() external view returns (uint256);
 }
 
-contract BasePaintSubscription is Ownable, ERC1155 {
-    IBasePaint immutable basepaint;
+contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgradeable, UUPSUpgradeable {
+    IBasePaint public basepaint;
 
     error WrongEthAmount();
     error InvalidSubscribedDay();
@@ -35,10 +37,11 @@ contract BasePaintSubscription is Ownable, ERC1155 {
         uint256 count;
     }
 
-    constructor(address _basepaint, address _owner)
-        Ownable(_owner)
-        ERC1155("https://basepaint.xyz/api/subscription/{id}")
-    {
+    function initialize(address _basepaint, address _owner) public initializer {
+        __Ownable_init(_owner);
+        __ERC1155_init("https://basepaint.xyz/api/subscription/{id}");
+        __UUPSUpgradeable_init();
+
         basepaint = IBasePaint(_basepaint);
     }
 
@@ -61,22 +64,21 @@ contract BasePaintSubscription is Ownable, ERC1155 {
         }
     }
 
-    function mintDaily(address[] calldata _addresses) external {
+    function mintBasePaints(address[] calldata _addresses) external {
         uint256 mintingToday = basepaint.today() - 1;
         uint256 mintCost = basepaint.openEditionPrice();
 
-        for (uint256 i; i < _addresses.length;) {
+        for (uint256 i = 0; i < _addresses.length; i++) {
             uint256 tokenBalance = balanceOf(_addresses[i], mintingToday);
             if (tokenBalance > 0) {
-                basepaint.mint{value: mintCost * tokenBalance}(mintingToday, tokenBalance);
                 _burn(_addresses[i], mintingToday, tokenBalance);
+                basepaint.mint{value: mintCost * tokenBalance}(mintingToday, tokenBalance);
                 basepaint.safeTransferFrom(address(this), _addresses[i], mintingToday, tokenBalance, "");
-            }
-            unchecked {
-                ++i;
             }
         }
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function onERC1155Received(address, address, uint256, uint256, bytes memory) public pure returns (bytes4) {
         return this.onERC1155Received.selector;
