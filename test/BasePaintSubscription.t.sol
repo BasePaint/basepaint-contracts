@@ -134,13 +134,37 @@ contract BasePaintSubscriptionTest is Test {
     function test_Initialize() public {
         assertEq(address(subscription.basepaint()), address(mockBasePaint));
         assertEq(subscription.owner(), owner);
+        assertEq(subscription.discountPercentage(), 5);
+    }
+
+    function test_SetDiscountPercentage() public {
+        vm.prank(owner);
+        subscription.setDiscountPercentage(10);
+        assertEq(subscription.discountPercentage(), 10);
+    }
+
+    function test_RevertWhen_NonOwnerSetsDiscountPercentage() public {
+        vm.prank(user1);
+        vm.expectRevert();
+        subscription.setDiscountPercentage(10);
+    }
+
+    function test_RevertWhen_InvalidDiscountPercentage() public {
+        vm.prank(owner);
+        vm.expectRevert(BasePaintSubscription.InvalidDiscountPercentage.selector);
+        subscription.setDiscountPercentage(101);
+    }
+
+    function calculateDiscountedPrice(uint256 price, uint256 discountPct) internal pure returns (uint256) {
+        return price * (100 - discountPct) / 100;
     }
 
     function test_Subscribe() public {
         BasePaintSubscription.Subscription[] memory subscriptions = new BasePaintSubscription.Subscription[](1);
         subscriptions[0] = BasePaintSubscription.Subscription(601, 2);
 
-        uint256 totalCost = 2 * openEditionPrice;
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost = 2 * discountedPrice;
 
         vm.prank(user1);
         subscription.subscribe{value: totalCost}(subscriptions, user1);
@@ -152,7 +176,8 @@ contract BasePaintSubscriptionTest is Test {
         BasePaintSubscription.Subscription[] memory subscriptions = new BasePaintSubscription.Subscription[](1);
         subscriptions[0] = BasePaintSubscription.Subscription(601, 2);
 
-        uint256 totalCost = 2 * openEditionPrice;
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost = 2 * discountedPrice;
 
         vm.prank(user1);
         subscription.subscribe{value: totalCost}(subscriptions, user2);
@@ -179,7 +204,8 @@ contract BasePaintSubscriptionTest is Test {
         BasePaintSubscription.Subscription[] memory subscriptions = new BasePaintSubscription.Subscription[](1);
         subscriptions[0] = BasePaintSubscription.Subscription(pastDay, 2);
 
-        uint256 totalCost = 2 * openEditionPrice;
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost = 2 * discountedPrice;
 
         vm.prank(user1);
         vm.expectRevert(BasePaintSubscription.InvalidSubscribedDay.selector);
@@ -192,8 +218,11 @@ contract BasePaintSubscriptionTest is Test {
         BasePaintSubscription.Subscription[] memory subscriptions = new BasePaintSubscription.Subscription[](1);
         subscriptions[0] = BasePaintSubscription.Subscription(800, 3);
 
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost = 3 * discountedPrice;
+
         vm.prank(user1);
-        subscription.subscribe{value: 3 * openEditionPrice}(subscriptions, user1);
+        subscription.subscribe{value: totalCost}(subscriptions, user1);
         
         mockBasePaint.setToday(801);
         
@@ -216,6 +245,58 @@ contract BasePaintSubscriptionTest is Test {
         subscription.mintBasePaints(addresses);
         
         assertEq(subscription.balanceOf(user1, 800), 0);
+    }
+
+    function test_MintWithDifferentDiscounts() public {
+        mockBasePaint.setToday(800);
+        
+        BasePaintSubscription.Subscription[] memory subscriptions1 = new BasePaintSubscription.Subscription[](1);
+        subscriptions1[0] = BasePaintSubscription.Subscription(800, 2);
+
+        uint256 discountedPrice1 = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost1 = 2 * discountedPrice1;
+
+        vm.prank(user1);
+        subscription.subscribe{value: totalCost1}(subscriptions1, user1);
+        
+        vm.prank(owner);
+        subscription.setDiscountPercentage(10);
+        
+        BasePaintSubscription.Subscription[] memory subscriptions2 = new BasePaintSubscription.Subscription[](1);
+        subscriptions2[0] = BasePaintSubscription.Subscription(800, 3);
+
+        uint256 discountedPrice2 = calculateDiscountedPrice(openEditionPrice, subscription.discountPercentage());
+        uint256 totalCost2 = 3 * discountedPrice2;
+
+        vm.prank(user2);
+        subscription.subscribe{value: totalCost2}(subscriptions2, user2);
+        
+        assertEq(subscription.balanceOf(user1, 800), 2);
+        assertEq(subscription.balanceOf(user2, 800), 3);
+        
+        mockBasePaint.setToday(801);
+        
+        vm.mockCall(
+            address(mockBasePaint),
+            abi.encodeWithSelector(MockBasePaint.mint.selector),
+            abi.encode()
+        );
+        
+        vm.mockCall(
+            address(mockBasePaint),
+            abi.encodeWithSelector(IERC1155.safeTransferFrom.selector),
+            abi.encode()
+        );
+        
+        address[] memory addresses = new address[](2);
+        addresses[0] = user1;
+        addresses[1] = user2;
+        
+        vm.prank(owner);
+        subscription.mintBasePaints(addresses);
+        
+        assertEq(subscription.balanceOf(user1, 800), 0);
+        assertEq(subscription.balanceOf(user2, 800), 0);
     }
 
     function test_UpgradeContract() public {

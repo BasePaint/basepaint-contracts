@@ -28,9 +28,11 @@ interface IBasePaint is IERC1155 {
 
 contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgradeable, UUPSUpgradeable {
     IBasePaint public basepaint;
+    uint256 public discountPercentage;
 
     error WrongEthAmount();
     error InvalidSubscribedDay();
+    error InvalidDiscountPercentage();
 
     struct Subscription {
         uint256 day;
@@ -43,11 +45,18 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
         __UUPSUpgradeable_init();
 
         basepaint = IBasePaint(_basepaint);
+        discountPercentage = 5;
+    }
+
+    function setDiscountPercentage(uint256 _discountPercentage) external onlyOwner {
+        if (_discountPercentage > 50) revert InvalidDiscountPercentage();
+        discountPercentage = _discountPercentage;
     }
 
     function subscribe(Subscription[] calldata _subscriptions, address _mintToAddress) external payable {
         uint256 mintingToday = basepaint.today() - 1;
-        uint256 price = basepaint.openEditionPrice();
+        uint256 fullPrice = basepaint.openEditionPrice();
+        uint256 discountedPrice = fullPrice * (100 - discountPercentage) / 100;
         uint256 totalCount = 0;
 
         for (uint256 i = 0; i < _subscriptions.length; i++) {
@@ -57,7 +66,7 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
             }
         }
 
-        if (msg.value != totalCount * price) revert WrongEthAmount();
+        if (msg.value != totalCount * discountedPrice) revert WrongEthAmount();
 
         for (uint256 i = 0; i < _subscriptions.length; i++) {
             _mint(_mintToAddress, _subscriptions[i].day, _subscriptions[i].count, "");
