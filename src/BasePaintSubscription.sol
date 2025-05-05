@@ -33,11 +33,6 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
     error WrongEthAmount();
     error InvalidSubscribedDay();
 
-    struct Subscription {
-        uint256 day;
-        uint256 count;
-    }
-
     function initialize(address _basepaint, address _owner) public initializer {
         __Ownable_init(_owner);
         __ERC1155_init("https://basepaint.xyz/api/subscription/{id}");
@@ -46,32 +41,37 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
         basepaint = IBasePaint(_basepaint);
     }
 
-    function subscribe(Subscription[] calldata _subscriptions, address _mintToAddress) external payable {
+    function subscribe(address _mintToAddress, uint256[] calldata _days, uint256[] calldata _counts) external payable {
+        require(_days.length == _counts.length, "Days and counts must have the same length");
+
         uint256 mintingToday = basepaint.today() - 1;
         uint256 fullPrice = basepaint.openEditionPrice();
         uint256 discountedPrice = fullPrice * (10000 - discountBasisPoints) / 10000;
         uint256 totalCount = 0;
+        bool isMintingToday = false;
 
-        for (uint256 i = 0; i < _subscriptions.length; i++) {
-            totalCount += _subscriptions[i].count;
-            if (_subscriptions[i].day < mintingToday) {
+        for (uint256 i = 0; i < _days.length; i++) {
+            totalCount += _counts[i];
+            if (_days[i] < mintingToday) {
                 revert InvalidSubscribedDay();
+            }
+            if (_days[i] == mintingToday) {
+                isMintingToday = true;
             }
         }
 
         if (msg.value < totalCount * discountedPrice) revert WrongEthAmount();
 
-        for (uint256 i = 0; i < _subscriptions.length; i++) {
-            if (_subscriptions[i].day == mintingToday) {
-                basepaint.mint{value: fullPrice * _subscriptions[i].count}(mintingToday, _subscriptions[i].count);
-                basepaint.safeTransferFrom(address(this), _mintToAddress, mintingToday, _subscriptions[i].count, "");
-            } else if (_subscriptions[i].day > mintingToday) {
-                _mint(_mintToAddress, _subscriptions[i].day, _subscriptions[i].count, "");
-            }
+        _mintBatch(_mintToAddress, _days, _counts, "");
+
+        if (isMintingToday) {
+            address[] memory _addresses = new address[](1);
+            _addresses[0] = _mintToAddress;
+            mintBasePaints(_addresses);
         }
     }
 
-    function mintBasePaints(address[] calldata _addresses) external {
+    function mintBasePaints(address[] memory _addresses) public {
         uint256 mintingToday = basepaint.today() - 1;
         uint256 mintCost = basepaint.openEditionPrice();
 
