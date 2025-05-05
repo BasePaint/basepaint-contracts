@@ -32,6 +32,7 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
 
     error WrongEthAmount();
     error InvalidSubscribedDay();
+    error DayCountMismatch();
 
     function initialize(address _basepaint, address _owner) public initializer {
         __Ownable_init(_owner);
@@ -42,7 +43,7 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
     }
 
     function subscribe(address _mintToAddress, uint256[] calldata _days, uint256[] calldata _counts) external payable {
-        require(_days.length == _counts.length, "Days and counts must have the same length");
+        if(_days.length != _counts.length) revert DayCountMismatch();
 
         uint256 mintingToday = basepaint.today() - 1;
         uint256 fullPrice = basepaint.openEditionPrice();
