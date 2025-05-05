@@ -87,7 +87,7 @@ contract BasePaintMetadataRegistryTest is Test {
         proposers[0] = address(0x3);
         proposers[1] = address(0x4);
 
-        vm.prank(owner);
+        vm.prank(editor);
         registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
 
         for (uint256 i = 0; i < ids.length; i++) {
@@ -137,15 +137,15 @@ contract BasePaintMetadataRegistryTest is Test {
         registry.setMetadata(1, "Test", new uint24[](0), 0, address(0));
     }
 
-    function testOnlyOwnerCanBatchSetMetadata() public {
+    function testOnlyEditorCanBatchSetMetadata() public {
         vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        vm.expectRevert("not the editor");
         registry.batchSetMetadata(
             new uint256[](1), new string[](1), new uint24[][](1), new uint96[](1), new address[](1)
         );
 
-        vm.prank(editor);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, editor));
+        vm.prank(owner);
+        vm.expectRevert("not the editor");
         registry.batchSetMetadata(
             new uint256[](1), new string[](1), new uint24[][](1), new uint96[](1), new address[](1)
         );
@@ -158,7 +158,7 @@ contract BasePaintMetadataRegistryTest is Test {
         uint96[] memory sizes = new uint96[](2);
         address[] memory proposers = new address[](2);
 
-        vm.prank(owner);
+        vm.prank(editor);
         vm.expectRevert("arrays must have the same length");
         registry.batchSetMetadata(ids, names, palettes, sizes, proposers);
     }
