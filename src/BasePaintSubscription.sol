@@ -33,6 +33,8 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
     error WrongEthAmount();
     error InvalidSubscribedDay();
     error DayCountMismatch();
+    error InsufficientContractBalance();
+    error RedeemFailed();
 
     function initialize(address _basepaint, address _owner) public initializer {
         __Ownable_init(_owner);
@@ -70,6 +72,26 @@ contract BasePaintSubscription is Initializable, OwnableUpgradeable, ERC1155Upgr
             _addresses[0] = _mintToAddress;
             mintBasePaints(_addresses);
         }
+    }
+
+    function refund(uint256[] calldata _days, uint256[] calldata _counts) external {
+        if(_days.length != _counts.length) revert DayCountMismatch();
+
+        uint256 totalCount = 0;
+        for (uint256 i = 0; i < _days.length; i++) {
+            totalCount += _counts[i];
+        }
+
+        uint256 fullPrice = basepaint.openEditionPrice();
+        uint256 discountedPrice = fullPrice * (10000 - discountBasisPoints) / 10000;
+        uint256 redeemAmount = totalCount * discountedPrice;
+
+        if (address(this).balance < redeemAmount) revert InsufficientContractBalance();
+
+        _burnBatch(msg.sender, _days, _counts);
+
+        (bool success, ) = msg.sender.call{value: redeemAmount}("");
+        if (!success) revert RedeemFailed();
     }
 
     function mintBasePaints(address[] memory _addresses) public {

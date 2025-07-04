@@ -145,6 +145,91 @@ contract BasePaintSubscriptionTest is Test {
         subscription.subscribe{value: totalCost}(user1, ids, counts);
     }
 
+    function test_Refund() public {
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory counts = new uint256[](1);
+
+        ids[0] = 601;
+        counts[0] = 2;
+
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, DISCOUNT_BASIS_POINTS);
+        uint256 totalCost = 2 * discountedPrice;
+
+        vm.prank(user1);
+        subscription.subscribe{value: totalCost}(user1, ids, counts);
+
+        assertEq(subscription.balanceOf(user1, 601), 2);
+
+        uint256 balanceBefore = user1.balance;
+
+        vm.prank(user1);
+        subscription.refund(ids, counts);
+
+        assertEq(subscription.balanceOf(user1, 601), 0);
+        assertEq(user1.balance, balanceBefore + totalCost);
+    }
+
+    function test_RefundMultipleTokens() public {
+        uint256[] memory ids = new uint256[](2);
+        uint256[] memory counts = new uint256[](2);
+
+        ids[0] = 601;
+        counts[0] = 2;
+        ids[1] = 602;
+        counts[1] = 3;
+
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, DISCOUNT_BASIS_POINTS);
+        uint256 totalCost = 5 * discountedPrice;
+
+        vm.prank(user1);
+        subscription.subscribe{value: totalCost}(user1, ids, counts);
+
+        assertEq(subscription.balanceOf(user1, 601), 2);
+        assertEq(subscription.balanceOf(user1, 602), 3);
+
+        uint256 balanceBefore = user1.balance;
+
+        vm.prank(user1);
+        subscription.refund(ids, counts);
+
+        assertEq(subscription.balanceOf(user1, 601), 0);
+        assertEq(subscription.balanceOf(user1, 602), 0);
+        assertEq(user1.balance, balanceBefore + totalCost);
+    }
+
+    function test_RevertWhen_RefundWithDayCountMismatch() public {
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory counts = new uint256[](2);
+
+        ids[0] = 601;
+        counts[0] = 2;
+        counts[1] = 3;
+
+        vm.prank(user1);
+        vm.expectRevert(BasePaintSubscription.DayCountMismatch.selector);
+        subscription.refund(ids, counts);
+    }
+
+    function test_RevertWhen_RefundInsufficientContractBalance() public {
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory counts = new uint256[](1);
+
+        ids[0] = 601;
+        counts[0] = 2;
+
+        uint256 discountedPrice = calculateDiscountedPrice(openEditionPrice, DISCOUNT_BASIS_POINTS);
+        uint256 totalCost = 2 * discountedPrice;
+
+        vm.prank(user1);
+        subscription.subscribe{value: totalCost}(user1, ids, counts);
+
+        vm.deal(address(subscription), totalCost - 1);
+
+        vm.prank(user1);
+        vm.expectRevert(BasePaintSubscription.InsufficientContractBalance.selector);
+        subscription.refund(ids, counts);
+    }
+
     function test_MintBasePaints() public {
         mockBasePaint.setToday(800);
 
