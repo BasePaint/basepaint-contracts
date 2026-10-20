@@ -11,6 +11,8 @@
 | BasePaintMetadataRegistry | `0x5104482a2Ef3a03b6270D3e931eac890b86FaD01` |
 | BasePaintSubscription     | `0x75CF063a65d361527180805b244bC51c1deAb075` |
 
+BasePaintNameResolver (ENS resolver for `*.basepaint.xyz`) is on Ethereum mainnet at `0xD68fe5b53e7E1AbeB5A4d0A6660667791f39263a`.
+
 ## Usage
 
 ### Build
